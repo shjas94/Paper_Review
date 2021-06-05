@@ -22,7 +22,7 @@
 * **Encoder**
   * 먼저 input image를 Shallow CNN을 통과하게 함으로써 local pattern과 texture를 포착할 수 있도록 함.
   * 다음으로 feature map은 Adaptive 2D Positional Encoding 모듈과 self attention 모듈을 통과한다. 이 때, self attention 모듈의 feedforward layer는 기존의 pointwise 방식이 아닌 Locality-Aware Feedforward 라는 새로운 방식의 layer임
-  * self attention 블록은 $N_e$번 반복된다.
+  * self attention 블록은 <img src="https://render.githubusercontent.com/render/math?math=N_e">번 반복된다.
 
   * **Shallow CNN block**
     * input image의 가장 원시적인 pattern과 texture를 추출한다.
@@ -40,11 +40,31 @@
     * 하지만, naive한 버전의 Positional Encoding로는 다양한 character arrangement를 다루는 것에 한계가 있음.
     * 따라서, Positional Encoding에는 input의 타입에 따라 다른 length element가 사용되어야 한다.
     * SATRN에서는 이러한 문제 역시 해결하기 위해 input에 따라 height와 width ratio를 dynamic하게 결정하기 위해 Adaptive 2D Positional Encoding이라는 방법을 제시함
-    * ***%상세한 알고리즘 리뷰는 추후 업데이트%***
-
+    * Adaptive 2D Positional Encoding은 <img src="https://render.githubusercontent.com/render/math?math=\mathbf{p}_{hw} = \alpha(\mathbf{E})\mathbf{p}_h^{sinu} + \beta(\mathbf{E})\mathbf{p}_w^{sinu}">로 나타낼 수 있음.
+    * 이 때, scale factor <img src="https://render.githubusercontent.com/render/math?math=\alpha(\mathbf{E})">와 <img src="https://render.githubusercontent.com/render/math?math=\beta(\mathbf{E})">는 input feature map <img src="https://render.githubusercontent.com/render/math?math=\mathbf{E}">에 대하여 global average pooling을 거친 뒤 2-layer의 perceptron을 통과하여 계산된다.
+    * 이를 수식으로 표현하면 다음과 같다.
+    * <img src="https://render.githubusercontent.com/render/math?math=\alpha(\mathbf{E}) = sigmoid(max(0, \mathbf{g}(\mathbf{E})\mathbf{W}_1^h)\mathbf{W}_2^h)">
+    * <img src="https://render.githubusercontent.com/render/math?math=\beta(\mathbf{E}) = sigmoid(max(0, \mathbf{g}(\mathbf{E})\mathbf{W}_1^w)\mathbf{W}_2^w)">
 
   * **Locality Aware Feedforward Layer**
     * 좋은 STR performance를 위해서는 long range dependency 뿐만이 아니라 한 single characters에 대한 local vicinity 또한 다룰 수 있어야 함.
     * self attention layer는 long term dependency를 다루는 데는 유리하지만 local structure를 다루는 것에 약점이 있음.
     * 따라서, SATRN에서는 두 개의 1x1 convolution(Dense layer 와 동일)로 구성된 기존의 Pointwise Feedforward Layer를 3x3 convolution layer로 대체한 Locality Aware Feedforward Layer를 사용.
   
+  ## Experiment
+  * 실험은 네 가지 측면을 고려하여 진행됨
+  * 첫 째, state of art model과의 정확도 비교
+  * 둘 째, 연산 효율성 분석
+  * 셋 째, 주요 모듈들에 대한 ablation study
+  * 마지막으로, 기존의 데이터셋에 비해 더 높은 난이도의 case에 대한 실험
+  * **STR Benchmark Datasets**
+    * 7개의 benchmark dataset이 사용되었고 이들은 크게 regular와 irregular 두 개의 그룹으로 나눠짐
+    * regular dataset의 경우는 horizontally aligned text들을 포함.
+    * irregular benchmark는 왜곡되어있는 text들을 포함.
+  * **Compare against Prior STR Methods**
+      ![SATRN_experiment](./imgs/../.imgs/SATRN_experiment1.png)
+    * Table 1에서 기존의 STR 모델과 SATRN을 상세히 비교함
+    * 모델들은 feature map의 dimensionality와 Spatial Transformer Network 적용 여부에 따라 grouped 되어있음
+    * SATRN은 2D feature map을 input으로 받는 다른 모델들과 비교해서 더 높은 성능을 보임
+    * 특히, SATRN이 초점을 맞췄던 irregular benchmark에서는 평균 4.7pp의 큰 점수차로 2위 솔루션을 앞지름
+  * **
